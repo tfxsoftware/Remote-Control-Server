@@ -50,18 +50,23 @@ class MDNSService:
             logger.info(f"Port: {self.config.port}")
             logger.info(f"Host: {self.config.host}")
             
+            # Get local IP address for mDNS registration
+            # We need to get the actual local IP, not 0.0.0.0 or 127.0.0.1
+            local_ip = self._get_local_ip()
+            logger.info(f"Using IP address for mDNS: {local_ip}")
+            
             # Create service properties
             properties = {
                 "version": "1.0",
                 "protocol": "websocket",
-                "description": "Remote TV Control Server"
+                "description": "Remote Control Server"
             }
             
             # Create ServiceInfo
             self.service_info = ServiceInfo(
                 type_=self.config.service_type,
                 name=f"{self.config.service_name}.{self.config.service_type}",
-                addresses=[self.config.host.encode()],
+                addresses=[socket.inet_pton(socket.AF_INET, local_ip)],
                 port=self.config.port,
                 properties=properties
             )
@@ -69,10 +74,25 @@ class MDNSService:
             # Register the service
             await self.zeroconf.async_register_service(self.service_info)
             logger.info(f"Successfully registered service: {self.service_info.name}")
+            logger.info(f"Service available at: {self.config.service_name}.local:{self.config.port}")
             
         except Exception as e:
             logger.error(f"Failed to register service: {e}")
             raise
+    
+    def _get_local_ip(self):
+        """Get the local IP address for mDNS registration"""
+        try:
+            # Create a socket to get local IP
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                # Connect to a remote address (doesn't actually connect)
+                s.connect(("8.8.8.8", 80))
+                local_ip = s.getsockname()[0]
+                logger.info(f"Detected local IP: {local_ip}")
+                return local_ip
+        except Exception as e:
+            logger.warning(f"Could not detect local IP, using 127.0.0.1: {e}")
+            return "127.0.0.1"
     
     async def start_discovery(self):
         """Start discovering other services on the network"""

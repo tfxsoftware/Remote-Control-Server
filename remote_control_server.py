@@ -3,6 +3,7 @@ import logging
 import signal
 import sys
 from typing import Optional
+import websockets
 
 try:
     from .websocket_handler import WebSocketHandler
@@ -36,7 +37,7 @@ class RemoteControlServer:
         try:
             # Start WebSocket server
             logger.info(f"Starting WebSocket server on {self.config.host}:{self.config.port}")
-            self.websocket_server = await asyncio.start_server(
+            self.websocket_server = await websockets.serve(
                 self.websocket_handler.handle_client,
                 self.config.host,
                 self.config.port
@@ -52,7 +53,7 @@ class RemoteControlServer:
             logger.info("Remote Control Server is now running and ready for connections")
             
             # Keep the server running
-            await self.websocket_server.serve_forever()
+            await self.websocket_server.wait_closed()
             
         except Exception as e:
             logger.error(f"Failed to start server: {e}")

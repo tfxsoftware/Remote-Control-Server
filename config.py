@@ -9,7 +9,7 @@ class ServerConfig:
     # Server settings
     host: str = "0.0.0.0"
     port: int = 8765
-    service_name: str = "remote-tv-server"
+    service_name: str = "remote-control"
     
     # Logging settings
     log_level: str = "INFO"
@@ -25,6 +25,7 @@ class ServerConfig:
     pyautogui_pause: float = 0.01
     
     # mDNS settings
+    service_type: str = "_remote-control._tcp.local."
     mdns_service_type: str = "_remote-control._tcp.local."
     mdns_protocol: str = "websocket"
     mdns_version: str = "1.0"

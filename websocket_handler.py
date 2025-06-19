@@ -23,7 +23,10 @@ class WebSocketHandler:
     async def handle_client(self, websocket: WebSocketServerProtocol, path: str):
         """Handle individual WebSocket client connections"""
         client_id = id(websocket)
-        client_address = websocket.remote_address
+        try:
+            client_address = websocket.remote_address
+        except AttributeError:
+            client_address = "unknown"
         self.clients.add(websocket)
         logger.info(f"Remote control client {client_id} connected from {client_address}")
         logger.info(f"Total connected clients: {len(self.clients)}")
@@ -35,7 +38,7 @@ class WebSocketHandler:
                 "client_id": client_id,
                 "screen_info": self.remote_control.get_screen_info(),
                 "server_info": {
-                    "name": "remote-tv-server",
+                    "name": "remote-control",
                     "version": "1.0"
                 }
             }
