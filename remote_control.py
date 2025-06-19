@@ -53,7 +53,7 @@ SPECIAL_KEYS = {
     'volumeup': 'volumeup', 'volup': 'volumeup',
     'volumedown': 'volumedown', 'voldown': 'volumedown',
     'volumemute': 'volumemute', 'mute': 'volumemute',
-    'play': 'play', 'pause': 'pause', 'stop': 'stop',
+    'play': 'space', 'pause': 'space', 'stop': 'stop',
     'next': 'nexttrack', 'previous': 'prevtrack',
     
     # Browser keys
