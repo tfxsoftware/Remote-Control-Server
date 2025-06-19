@@ -6,6 +6,7 @@ A modern Python WebSocket server that transforms your computer into a remotely c
 
 ### **Remote Control Capabilities**
 - **Mouse Control**: Move, click (left/right), scroll with precision
+- **Touchpad Support**: Drag movement and tap-to-click functionality
 - **Keyboard Control**: Type text, send special keys, key combinations
 - **Special Keys**: Backspace, Enter, Tab, Escape, Function keys (F1-F12), Arrow keys
 - **Key Combinations**: Ctrl+C, Alt+Tab, Ctrl+Alt+Delete, and more
