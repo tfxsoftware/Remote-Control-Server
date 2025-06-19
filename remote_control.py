@@ -164,8 +164,11 @@ class RemoteControl:
                 pyautogui.keyUp(key)
                 logger.debug(f"Key up: {key}")
             else:
-                # Press and release
-                pyautogui.press(key)
+                # Press and release - use typewrite for space key for better reliability
+                if key == 'space':
+                    pyautogui.typewrite(' ')
+                else:
+                    pyautogui.press(key)
                 logger.debug(f"Key press: {key}")
     
     async def handle_key_type(self, data: dict):
