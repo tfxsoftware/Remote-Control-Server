@@ -1,150 +1,145 @@
-# Remote Control Server
+# Tomas Control Server
 
-A modular Python WebSocket server that acts as a remote control for your computer, allowing mobile apps to send mouse and keyboard commands via WebSocket. The server automatically registers itself using mDNS (multicast DNS) for easy discovery on the local network.
+A modern Python WebSocket server that transforms your computer into a remotely controllable device. The server automatically registers itself on the local network using mDNS, making it easy for mobile apps to discover and connect without manual IP configuration.
 
-## Features
+## 🚀 Features
 
-- **Modular Architecture**: Clean separation of concerns with dedicated modules
-- **Remote Control Server**: Receives mouse and keyboard commands from mobile apps
-- **mDNS Registration**: Automatically registers the server on the local network
-- **Mouse Control**: Move, click, scroll, and right-click functionality
-- **Keyboard Control**: Key presses, key holds, and text typing
+### **Remote Control Capabilities**
+- **Mouse Control**: Move, click (left/right), scroll with precision
+- **Keyboard Control**: Type text, send special keys, key combinations
+- **Special Keys**: Backspace, Enter, Tab, Escape, Function keys (F1-F12), Arrow keys
+- **Key Combinations**: Ctrl+C, Alt+Tab, Ctrl+Alt+Delete, and more
 - **Real-time Response**: Immediate execution of commands
-- **Screen Resolution Detection**: Automatically detects and reports screen dimensions
-- **Safety Features**: Built-in failsafe and coordinate bounds checking
-- **Configurable**: Easy to customize settings and behavior
 
-## Project Structure
+### **Network Discovery**
+- **mDNS Registration**: Automatically registers as `remote-control.local`
+- **Zero Configuration**: No manual IP setup required
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Local Network**: Secure local network communication
+
+### **Connection Management**
+- **Multiple Clients**: Support for multiple connected devices
+- **Connection Resilience**: Automatic reconnection handling
+- **Status Monitoring**: Real-time connection status
+- **Graceful Shutdown**: Clean disconnection handling
+
+### **Safety Features**
+- **Failsafe Mode**: Move mouse to corner to stop (pyautogui safety)
+- **Coordinate Bounds**: Prevents mouse from going off-screen
+- **Input Validation**: Validates all incoming commands
+- **Error Handling**: Comprehensive error logging and recovery
+
+## 🏗️ Architecture
 
 ```
-├── run.py                           # Direct execution script
-├── test_client.py                   # Test client for development
-├── requirements.txt                 # Python dependencies
-├── README.md                        # This file
-├── __init__.py                      # Package initialization
-├── config.py                        # Configuration management
-├── remote_control.py                # Mouse/keyboard control logic
-├── mdns_service.py                  # mDNS registration and discovery
-├── websocket_handler.py             # WebSocket connection handling
-├── remote_control_server.py         # Main server orchestration
-└── main.py                          # Package entry point
+┌─────────────────┐    WebSocket    ┌─────────────────┐
+│   Mobile App    │ ◄─────────────► │  Tomas Control  │
+│   (Client)      │                 │    Server       │
+└─────────────────┘                 └─────────────────┘
+                                              │
+                                              ▼
+                                    ┌─────────────────┐
+                                    │   mDNS Service  │
+                                    │  (Discovery)    │
+                                    └─────────────────┘
 ```
 
-## Installation
+## 📦 Installation
 
-1. Install the required dependencies:
+### **Prerequisites**
+- Python 3.8+
+- Windows/macOS/Linux
 
+### **Install Dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-**Note**: On some systems, you may need additional dependencies for pyautogui:
-- **Windows**: No additional dependencies needed
-- **macOS**: `pip install pyobjc-core pyobjc`
-- **Linux**: `sudo apt-get install python3-tk python3-dev` or equivalent
+### **Required Packages**
+- `websockets`: WebSocket server implementation
+- `pyautogui`: Mouse and keyboard control
+- `zeroconf`: mDNS service registration
+- `asyncio`: Asynchronous operations
 
-## Usage
+## 🚀 Quick Start
 
-### Starting the Server
-
-Run the remote control server:
-
+### **1. Start the Server**
 ```bash
+cd server
 python run.py
 ```
 
-The server will:
-- Start on `0.0.0.0:8765` by default
-- Register itself as an mDNS service with type `_remote-control._tcp.local.`
-- Detect your screen resolution
-- Accept WebSocket connections from mobile apps
-- Execute mouse and keyboard commands in real-time
-
-### Testing with the Test Client
-
-#### Demo Mode
-Run a demonstration of all remote control features:
-
-```bash
-python test_client.py --demo
+### **2. Server Output**
+```
+=== run.py script started ===
+Starting Remote Control Server...
+Configuration loaded: ServerConfig(...)
+Server instance created successfully
+Starting server...
+Starting WebSocket server on 0.0.0.0:8765
+WebSocket server started successfully
+Starting mDNS service...
+Service registered: remote-control.local:8765
+Remote Control Server is now running and ready for connections
 ```
 
-#### Interactive Mode
-Run an interactive client for manual testing:
+### **3. Connect from Mobile App**
+- Install "Tomas Control" app on your phone
+- App will automatically discover the server
+- Connect and start controlling your PC!
 
-```bash
-python test_client.py
+## ⚙️ Configuration
+
+### **Server Configuration** (`config.py`)
+```python
+@dataclass
+class ServerConfig:
+    host: str = "0.0.0.0"           # Listen on all interfaces
+    port: int = 8765                # WebSocket port
+    service_name: str = "remote-control"  # mDNS service name
+    service_type: str = "_remote-control._tcp.local."  # mDNS type
 ```
 
-## API Documentation
+### **Custom Configuration**
+```python
+from config import ServerConfig
+from remote_control_server import RemoteControlServer
 
-### WebSocket Connection
+# Custom configuration
+config = ServerConfig(
+    host="192.168.1.100",
+    port=9000,
+    service_name="my-remote"
+)
 
-Connect to the server via WebSocket at `ws://<server-ip>:8765`
+# Start server
+server = RemoteControlServer(config)
+await server.start()
+```
 
-### Message Protocol
+## 📡 API Reference
 
-All messages are JSON formatted with a `type` field indicating the message type.
+### **WebSocket Commands**
 
-#### Server to Client Messages
-
-##### Welcome Message
+#### **Mouse Commands**
 ```json
-{
-  "type": "welcome",
-  "client_id": 123456,
-  "screen_info": {
-    "width": 1920,
-    "height": 1080
-  },
-  "server_info": {
-    "name": "remote-tv-server",
-    "version": "1.0"
-  }
-}
-```
-
-##### Pong Response
-```json
-{
-  "type": "pong",
-  "timestamp": 1640995200.0
-}
-```
-
-##### Error Response
-```json
-{
-  "type": "error",
-  "command": "mouse_move",
-  "error": "Invalid coordinates"
-}
-```
-
-#### Client to Server Commands
-
-##### Mouse Movement
-```json
+// Move mouse
 {
   "type": "mouse_move",
-  "x": 500,
-  "y": 300,
+  "x": 100,
+  "y": 200,
   "relative": false
 }
-```
 
-##### Mouse Click
-```json
+// Click mouse
 {
   "type": "mouse_click",
   "button": "left",
   "clicks": 1,
   "interval": 0.0
 }
-```
 
-##### Mouse Scroll
-```json
+// Scroll mouse
 {
   "type": "mouse_scroll",
   "clicks": 3,
@@ -153,152 +148,139 @@ All messages are JSON formatted with a `type` field indicating the message type.
 }
 ```
 
-##### Key Press
+#### **Keyboard Commands**
 ```json
-{
-  "type": "key_press",
-  "key": "ctrl",
-  "hold": false,
-  "release": false
-}
-```
-
-##### Text Typing
-```json
+// Type text
 {
   "type": "key_type",
   "text": "Hello World!",
   "interval": 0.01
 }
+
+// Press special key
+{
+  "type": "key_press",
+  "key": "backspace"
+}
+
+// Key combination
+{
+  "type": "key_press",
+  "key": "ctrl+c"
+}
+
+// Hold key
+{
+  "type": "key_press",
+  "key": "shift",
+  "hold": true
+}
 ```
 
-##### Ping
+#### **System Commands**
 ```json
+// Ping server
 {
   "type": "ping",
   "timestamp": 1640995200.0
 }
 ```
 
-### Command Reference
+### **Supported Special Keys**
+- **Navigation**: `backspace`, `delete`, `enter`, `tab`, `escape`, `space`
+- **Arrow Keys**: `up`, `down`, `left`, `right`
+- **Function Keys**: `f1` through `f12`
+- **Page Navigation**: `home`, `end`, `pageup`, `pagedown`
+- **Modifier Keys**: `ctrl`, `alt`, `shift`, `win`, `cmd`
 
-#### Mouse Commands
+## 🔧 Development
 
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `mouse_move` | `x`, `y`, `relative` | Move mouse to coordinates |
-| `mouse_click` | `button`, `clicks`, `interval` | Click mouse button |
-| `mouse_scroll` | `clicks`, `x`, `y` | Scroll mouse wheel |
-
-**Mouse Buttons**: `left`, `right`, `middle`, `double`
-
-#### Keyboard Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `key_press` | `key`, `hold`, `release` | Press/release key |
-| `key_type` | `text`, `interval` | Type text |
-
-**Key Actions**:
-- `hold: true` - Hold key down
-- `release: true` - Release key
-- Both `false` - Press and release
-
-### mDNS Discovery
-
-The server registers itself as a `_remote-control._tcp.local.` service with the following properties:
-
-- `port`: Server port (default: 8765)
-- `protocol`: "websocket"
-- `version`: "1.0"
-- `type`: "remote-control"
-- `screen_width`: Screen width in pixels
-- `screen_height`: Screen height in pixels
-
-## Configuration
-
-You can customize the server by modifying the configuration:
-
-```python
-from config import ServerConfig
-from remote_control_server import RemoteControlServer
-
-# Create custom configuration
-config = ServerConfig(
-    host="0.0.0.0",
-    port=8765,
-    service_name="my-remote",
-    log_level="DEBUG"
-)
-
-# Start server with custom config
-server = RemoteControlServer(config)
-await server.start()
+### **Project Structure**
+```
+server/
+├── run.py                    # Main entry point
+├── remote_control_server.py  # Server orchestration
+├── websocket_handler.py      # WebSocket connection handling
+├── remote_control.py         # Mouse/keyboard control logic
+├── mdns_service.py          # mDNS registration and discovery
+├── config.py                # Configuration management
+├── test_client.py           # Test client for development
+└── requirements.txt         # Python dependencies
 ```
 
-## Module Documentation
-
-### `config.py`
-Configuration management with a `ServerConfig` dataclass that centralizes all server settings.
-
-### `remote_control.py`
-Handles all mouse and keyboard control operations using pyautogui.
-
-### `mdns_service.py`
-Manages mDNS service registration and discovery using zeroconf.
-
-### `websocket_handler.py`
-Manages WebSocket connections and message processing.
-
-### `remote_control_server.py`
-Main server class that orchestrates all components.
-
-## Safety Features
-
-- **Failsafe**: Move mouse to top-left corner to stop execution
-- **Coordinate Bounds**: All mouse movements are clamped to screen boundaries
-- **Rate Limiting**: Small delays between actions to prevent overwhelming
-- **Error Handling**: Graceful handling of invalid commands
-
-## Troubleshooting
-
-### Permission Issues
-On some systems, you may need elevated privileges for mouse/keyboard control:
-
+### **Running Tests**
 ```bash
-sudo python run.py
+# Test client for development
+python test_client.py --demo
+
+# Interactive test client
+python test_client.py
 ```
 
-### Firewall Issues
-Make sure your firewall allows:
-- Incoming connections on port 8765 (or your chosen port)
-- mDNS traffic (UDP port 5353)
+### **Logging**
+The server uses structured logging with different levels:
+- `INFO`: Connection events, command execution
+- `DEBUG`: Detailed command information
+- `ERROR`: Connection failures, command errors
 
-### Display Issues
-- Ensure you're running on the correct display (for multi-monitor setups)
-- Some remote desktop solutions may interfere with pyautogui
+## 🔒 Security Considerations
 
-### Network Issues
-- Ensure all devices are on the same local network
-- Check that mDNS is enabled on your network
-- Some corporate networks may block mDNS traffic
+### **Network Security**
+- **Local Network Only**: Server only accepts local connections
+- **No Authentication**: Designed for trusted local networks
+- **mDNS Discovery**: Automatic service discovery within network
 
-## Dependencies
+### **Input Safety**
+- **Command Validation**: All commands are validated before execution
+- **Coordinate Bounds**: Mouse coordinates are bounded to screen
+- **Failsafe Mode**: Move mouse to corner to stop execution
 
-- `websockets`: WebSocket server implementation
-- `zeroconf`: mDNS service discovery
-- `pyautogui`: Mouse and keyboard control
-- `asyncio`: Asynchronous I/O support
+## 🐛 Troubleshooting
 
-## Security Considerations
+### **Common Issues**
 
-⚠️ **Warning**: This server allows remote control of your computer. Use with caution:
+#### **Server Won't Start**
+```bash
+# Check if port is in use
+netstat -an | findstr 8765
 
-- Only run on trusted networks
-- Consider implementing authentication
-- Be aware that anyone on the network can potentially control your computer
-- Use firewall rules to restrict access if needed
+# Check Python dependencies
+pip list | grep websockets
+```
 
-## License
+#### **mDNS Registration Fails**
+```bash
+# Check if mDNS is working
+dns-sd -B _remote-control._tcp local.
 
-This project is open source and available under the MIT License. 
+# Try manual IP configuration
+# Edit config.py to use specific IP
+```
+
+#### **Client Can't Connect**
+- Ensure both devices are on same WiFi network
+- Check firewall settings
+- Verify mDNS is enabled on network
+
+### **Debug Mode**
+```bash
+# Enable debug logging
+export LOG_LEVEL=DEBUG
+python run.py
+```
+
+## 📄 License
+
+This project is part of Tomas Control - a remote control solution for local networks.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+---
+
+**Tomas Control Server** - Transform your computer into a remotely controllable device with zero configuration! 🚀 
