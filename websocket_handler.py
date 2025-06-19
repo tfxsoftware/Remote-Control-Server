@@ -85,6 +85,9 @@ class WebSocketHandler:
             elif command_type == "key_type":
                 await self.remote_control.handle_key_type(data)
                 
+            elif command_type == "multiple_keys":
+                await self.remote_control.handle_multiple_keys(data)
+                
             elif command_type == "ping":
                 response = {
                     "type": "pong", 
