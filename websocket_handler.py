@@ -20,7 +20,7 @@ class WebSocketHandler:
         self.remote_control = remote_control
         self.clients: Set[WebSocketServerProtocol] = set()
     
-    async def handle_client(self, websocket: WebSocketServerProtocol, path: str):
+    async def handle_client(self, websocket: WebSocketServerProtocol):
         """Handle individual WebSocket client connections"""
         client_id = id(websocket)
         try:
