@@ -73,24 +73,91 @@ class RemoteControl:
         # Get screen dimensions
         self.screen_width, self.screen_height = pyautogui.size()
         logger.info(f"Screen resolution: {self.screen_width}x{self.screen_height}")
+        
+        # Fail-safe configurations
+        self.last_mouse_move_time = time.time()
+        self.min_move_interval = 0.005  # Minimum time between mouse moves (200Hz max)
+        self.max_move_distance = 100    # Maximum pixels per move
+        self.move_count = 0
+        self.last_move_reset = time.time()
+        self.max_moves_per_second = 200  # Maximum moves per second
+        self.is_locked = False          # Emergency lock if erratic behavior detected
+    
+    def _validate_movement(self, x: int, y: int, relative: bool) -> tuple[bool, str]:
+        """Validate mouse movement parameters"""
+        current_time = time.time()
+        
+        # Check rate limiting
+        if current_time - self.last_mouse_move_time < self.min_move_interval:
+            return False, "Rate limit exceeded"
+            
+        # Check move frequency
+        self.move_count += 1
+        if current_time - self.last_move_reset >= 1.0:
+            self.move_count = 0
+            self.last_move_reset = current_time
+        elif self.move_count > self.max_moves_per_second:
+            self.is_locked = True
+            return False, "Emergency lock: too many movements"
+            
+        # Validate movement distance
+        if relative:
+            if abs(x) > self.max_move_distance or abs(y) > self.max_move_distance:
+                return False, f"Movement too large: ({x}, {y})"
+        else:
+            # For absolute movements, ensure within screen bounds
+            if not (0 <= x < self.screen_width and 0 <= y < self.screen_height):
+                return False, f"Position out of bounds: ({x}, {y})"
+        
+        return True, ""
+    
+    def _emergency_unlock(self):
+        """Reset emergency lock after a timeout"""
+        if self.is_locked and time.time() - self.last_move_reset > 2.0:
+            self.is_locked = False
+            self.move_count = 0
+            self.last_move_reset = time.time()
+            logger.info("Emergency lock released")
     
     async def handle_mouse_move(self, data: dict):
         """Handle mouse movement commands"""
-        x = data.get("x")
-        y = data.get("y")
-        relative = data.get("relative", False)
-        
-        if relative:
-            # Move relative to current position
-            pyautogui.moveRel(x, y, duration=0.01)
-        else:
-            # Move to absolute position
-            # Ensure coordinates are within screen bounds
-            x = max(0, min(x, self.screen_width - 1))
-            y = max(0, min(y, self.screen_height - 1))
-            pyautogui.moveTo(x, y, duration=0.01)
-        
-        logger.debug(f"Mouse moved to ({x}, {y})")
+        try:
+            # Check emergency lock
+            self._emergency_unlock()
+            if self.is_locked:
+                logger.warning("Movement blocked: emergency lock active")
+                return
+            
+            x = data.get("x", 0)
+            y = data.get("y", 0)
+            relative = data.get("relative", False)
+            
+            # Validate movement
+            is_valid, error_msg = self._validate_movement(x, y, relative)
+            if not is_valid:
+                logger.warning(f"Invalid movement: {error_msg}")
+                return
+            
+            if relative:
+                # Move relative to current position
+                current_x, current_y = pyautogui.position()
+                target_x = max(0, min(current_x + x, self.screen_width - 1))
+                target_y = max(0, min(current_y + y, self.screen_height - 1))
+                actual_x = target_x - current_x
+                actual_y = target_y - current_y
+                pyautogui.moveRel(actual_x, actual_y, duration=0.01)
+            else:
+                # Move to absolute position
+                x = max(0, min(x, self.screen_width - 1))
+                y = max(0, min(y, self.screen_height - 1))
+                pyautogui.moveTo(x, y, duration=0.01)
+            
+            self.last_mouse_move_time = time.time()
+            logger.debug(f"Mouse moved to ({x}, {y})")
+            
+        except Exception as e:
+            logger.error(f"Mouse movement error: {str(e)}")
+            self.is_locked = True  # Enable emergency lock on error
     
     async def handle_mouse_click(self, data: dict):
         """Handle mouse click commands"""
@@ -111,12 +178,18 @@ class RemoteControl:
     
     async def handle_mouse_scroll(self, data: dict):
         """Handle mouse scroll commands"""
-        x = data.get("x", 0)
-        y = data.get("y", 0)
-        clicks = data.get("clicks", 3)
-        
-        pyautogui.scroll(clicks, x=x, y=y)
-        logger.debug(f"Mouse scroll: {clicks} clicks at ({x}, {y})")
+        try:
+            amount = data.get("amount", 0)
+            
+            # Validate scroll amount
+            max_scroll = 500
+            amount = max(-max_scroll, min(max_scroll, amount))
+            
+            pyautogui.scroll(amount)
+            logger.debug(f"Mouse scroll: {amount}")
+            
+        except Exception as e:
+            logger.error(f"Mouse scroll error: {str(e)}")
     
     async def handle_key_press(self, data: dict):
         """Handle key press commands"""
