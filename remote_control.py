@@ -75,8 +75,14 @@ class RemoteControl:
         self.screen_width, self.screen_height = pyautogui.size()
         logger.info(f"Screen resolution: {self.screen_width}x{self.screen_height}")
         
-        # Fail-safe configurations
+        # Configure PyAutoGUI - disable failsafe since we'll handle bounds ourselves
+        pyautogui.FAILSAFE = False
+        pyautogui.PAUSE = 0.01  # Small delay between actions
+        
+        # Movement control
         self.last_mouse_move_time = time.time()
+        
+        # Fail-safe configurations
         self.min_move_interval = 0.005  # Minimum time between mouse moves (200Hz max)
         self.max_move_distance = 100    # Maximum pixels per move
         self.move_count = 0
@@ -123,42 +129,37 @@ class RemoteControl:
     async def handle_mouse_move(self, data: dict):
         """Handle mouse movement commands"""
         try:
-            # Check emergency lock
-            self._emergency_unlock()
-            if self.is_locked:
-                logger.warning("Movement blocked: emergency lock active")
-                return
-            
             x = data.get("x", 0)
             y = data.get("y", 0)
-            relative = data.get("relative", False)
-            
-            # Validate movement
-            is_valid, error_msg = self._validate_movement(x, y, relative)
-            if not is_valid:
-                logger.warning(f"Invalid movement: {error_msg}")
-                return
+            relative = data.get("relative", True)
             
             if relative:
-                # Move relative to current position
                 current_x, current_y = pyautogui.position()
-                target_x = max(0, min(current_x + x, self.screen_width - 1))
-                target_y = max(0, min(current_y + y, self.screen_height - 1))
-                actual_x = target_x - current_x
-                actual_y = target_y - current_y
-                pyautogui.moveRel(actual_x, actual_y, duration=0.01)
+                target_x = current_x + x
+                target_y = current_y + y
+                
+                # Keep cursor away from edges
+                if target_x < 5:
+                    x = 5 - current_x
+                elif target_x > self.screen_width - 5:
+                    x = (self.screen_width - 5) - current_x
+                    
+                if target_y < 5:
+                    y = 5 - current_y
+                elif target_y > self.screen_height - 5:
+                    y = (self.screen_height - 5) - current_y
+                
+                pyautogui.moveRel(x, y)
             else:
-                # Move to absolute position
-                x = max(0, min(x, self.screen_width - 1))
-                y = max(0, min(y, self.screen_height - 1))
-                pyautogui.moveTo(x, y, duration=0.01)
+                # For absolute moves, clamp to safe area
+                safe_x = max(5, min(self.screen_width - 5, x))
+                safe_y = max(5, min(self.screen_height - 5, y))
+                pyautogui.moveTo(safe_x, safe_y)
             
             self.last_mouse_move_time = time.time()
-            logger.debug(f"Mouse moved to ({x}, {y})")
             
         except Exception as e:
             logger.error(f"Mouse movement error: {str(e)}")
-            self.is_locked = True  # Enable emergency lock on error
     
     async def handle_mouse_click(self, data: dict):
         """Handle mouse click commands"""
