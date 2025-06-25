@@ -6,6 +6,7 @@ import websockets
 from websockets.server import WebSocketServerProtocol
 import pyautogui
 import time
+import platform
 
 logger = logging.getLogger(__name__)
 
@@ -185,8 +186,19 @@ class RemoteControl:
             max_scroll = 500
             amount = max(-max_scroll, min(max_scroll, amount))
             
+            # Adjust scroll amount based on platform
+            if platform.system() == 'Windows':
+                # Windows needs smaller scroll values
+                amount = amount // 3
+            elif platform.system() == 'Darwin':  # macOS
+                # macOS can handle the values as is
+                pass
+            else:  # Linux
+                # Linux typically needs similar values to macOS
+                pass
+            
             pyautogui.scroll(amount)
-            logger.debug(f"Mouse scroll: {amount}")
+            logger.debug(f"Mouse scroll: {amount} on {platform.system()}")
             
         except Exception as e:
             logger.error(f"Mouse scroll error: {str(e)}")
