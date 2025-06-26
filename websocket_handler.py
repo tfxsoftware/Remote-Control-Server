@@ -20,6 +20,19 @@ class WebSocketHandler:
         self.remote_control = remote_control
         self.clients: Set[WebSocketServerProtocol] = set()
     
+    async def cleanup_connections(self):
+        """Clean up any stale connections"""
+        logger.info(f"Cleaning up connections. Current clients: {len(self.clients)}")
+        for client in list(self.clients):
+            try:
+                if client.closed:
+                    self.clients.discard(client)
+                    logger.info(f"Removed closed client {id(client)}")
+            except Exception as e:
+                logger.error(f"Error cleaning up client {id(client)}: {e}")
+                self.clients.discard(client)
+        logger.info(f"Cleanup complete. Remaining clients: {len(self.clients)}")
+    
     async def handle_client(self, websocket: WebSocketServerProtocol):
         """Handle individual WebSocket client connections"""
         client_id = id(websocket)
@@ -27,6 +40,10 @@ class WebSocketHandler:
             client_address = websocket.remote_address
         except AttributeError:
             client_address = "unknown"
+        
+        # Clean up any stale connections first
+        await self.cleanup_connections()
+        
         self.clients.add(websocket)
         logger.info(f"Remote control client {client_id} connected from {client_address}")
         logger.info(f"Total connected clients: {len(self.clients)}")
@@ -59,8 +76,11 @@ class WebSocketHandler:
         except websockets.exceptions.ConnectionClosed:
             logger.info(f"Remote control client {client_id} disconnected")
         finally:
-            self.clients.remove(websocket)
-            logger.info(f"Client {client_id} removed. Total clients: {len(self.clients)}")
+            try:
+                self.clients.discard(websocket)  # Use discard instead of remove to avoid KeyError
+                logger.info(f"Client {client_id} removed. Total clients: {len(self.clients)}")
+            except Exception as e:
+                logger.error(f"Error removing client {client_id}: {e}")
     
     async def handle_command(self, websocket: WebSocketServerProtocol, data: dict):
         """Handle incoming remote control commands"""
@@ -68,6 +88,7 @@ class WebSocketHandler:
         client_id = id(websocket)
         
         logger.info(f"Processing command '{command_type}' from client {client_id}")
+        logger.info(f"Command data: {data}")
         
         try:
             if command_type == "mouse_move":
@@ -77,7 +98,9 @@ class WebSocketHandler:
                 await self.remote_control.handle_mouse_click(data)
                 
             elif command_type == "mouse_scroll":
+                logger.info(f"Routing scroll command to handler: {data}")
                 await self.remote_control.handle_mouse_scroll(data)
+                logger.info(f"Scroll command handled successfully")
                 
             elif command_type == "key_press":
                 await self.remote_control.handle_key_press(data)

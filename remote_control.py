@@ -111,12 +111,20 @@ class RemoteControl:
     
     async def handle_mouse_scroll(self, data: dict):
         """Handle mouse scroll commands"""
-        x = data.get("x", 0)
-        y = data.get("y", 0)
-        clicks = data.get("clicks", 3)
+        amount = data.get("amount", 0)
         
-        pyautogui.scroll(clicks, x=x, y=y)
-        logger.debug(f"Mouse scroll: {clicks} clicks at ({x}, {y})")
+        logger.info(f"Scroll command received: amount={amount}, data={data}")
+        
+        if amount != 0:
+            try:
+                # Use simple scroll without coordinates - pyautogui will use current mouse position
+                logger.info(f"Executing scroll: amount={amount}")
+                pyautogui.scroll(amount)
+                logger.info(f"Scroll executed successfully: amount={amount}")
+            except Exception as e:
+                logger.error(f"Error executing scroll: {e}")
+        else:
+            logger.warning(f"Scroll command ignored: amount is 0")
     
     async def handle_key_press(self, data: dict):
         """Handle key press commands"""
